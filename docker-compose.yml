@@ -1,0 +1,62 @@
+services:
+  mysql:
+    image: mysql:8.4
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: evidencevault
+      MYSQL_USER: evidencevault
+      MYSQL_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?Set MYSQL_ROOT_PASSWORD}
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -u root -p$${MYSQL_ROOT_PASSWORD} --silent"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  clamav:
+    image: clamav/clamav:stable
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "clamdscan --ping 1:1 || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 10
+
+  app:
+    build: .
+    restart: unless-stopped
+    environment:
+      DB_URL: jdbc:mysql://mysql:3306/evidencevault?useSSL=false&serverTimezone=UTC
+      DB_USERNAME: evidencevault
+      DB_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD}
+      STORAGE_PATH: /var/lib/evidencevault/evidence
+      APP_SEED_ENABLED: "false"
+      SECURITY_HSTS: "true"
+      MALWARE_SCAN_ENABLED: "true"
+      MALWARE_SCAN_HOST: clamav
+      MALWARE_SCAN_PORT: "3310"
+    volumes:
+      - evidence_data:/var/lib/evidencevault/evidence
+    depends_on:
+      mysql:
+        condition: service_healthy
+      clamav:
+        condition: service_healthy
+
+  nginx:
+    image: nginx:1.29-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./certs:/etc/nginx/certs:ro
+    depends_on:
+      - app
+
+volumes:
+  mysql_data:
+  evidence_data:

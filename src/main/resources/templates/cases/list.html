@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>EvidenceVault | Cases</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="/css/app.css">
+</head>
+<body class="cases-page">
+<nav class="navbar dashboard-nav border-bottom">
+    <div class="container-fluid dashboard-nav-inner">
+        <a class="dashboard-brand" href="/dashboard">
+            <span class="brand-mark dashboard-brand-mark">EV</span>
+            <span><strong>EvidenceVault</strong><small>Digital Forensics Platform</small></span>
+        </a>
+        <div class="dashboard-nav-actions">
+            <a class="nav-action" href="/dashboard"><span>▣</span> Dashboard</a>
+            <a class="nav-action active" href="/cases"><span>▤</span> Cases</a>
+            <a th:if="${#authorization.expression('hasRole(''ADMIN'')')}" class="nav-action" href="/audit"><span>◷</span> Audit</a>
+            <form method="post" action="/logout" class="d-inline">
+                <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
+                <button class="logout-action" type="submit">⇥ Logout</button>
+            </form>
+        </div>
+    </div>
+</nav>
+
+<main class="container-fluid cases-container">
+    <section class="cases-hero reveal-panel">
+        <div>
+            <a href="/dashboard" class="back-dashboard"><span>←</span> Dashboard</a>
+            <div class="eyebrow cases-eyebrow"><span class="pulse-line"></span> CASE MANAGEMENT</div>
+            <h1>Investigation Cases</h1>
+            <p>Create, review and preserve digital investigation cases from a centralized evidence console.</p>
+        </div>
+        <a href="/cases/new" class="dashboard-primary"><span>＋</span> New Investigation</a>
+    </section>
+
+    <section class="cases-toolbar reveal-panel">
+        <div class="case-toolbar-copy"><span class="panel-kicker">CASE REGISTER</span><strong th:text="${#lists.size(cases) + ' registered investigations'}">0 registered investigations</strong></div>
+        <div class="case-search"><span>⌕</span><input id="caseSearch" type="search" placeholder="Search case ID, title or type…" autocomplete="off"></div>
+    </section>
+
+    <section class="cases-table-panel reveal-panel">
+        <div class="table-responsive">
+            <table class="table cases-table align-middle mb-0" id="casesTable">
+                <thead><tr><th>Case</th><th>Investigation</th><th>Type</th><th>Status</th><th>Created</th><th></th></tr></thead>
+                <tbody>
+                <tr class="case-row" th:each="c:${cases}">
+                    <td>
+                        <div class="case-id"><span class="case-glyph">⌁</span><div><code th:text="${c.caseId}"></code><small>Evidence container</small></div></div>
+                    </td>
+                    <td><strong class="case-title" th:text="${c.title}"></strong></td>
+                    <td><span class="type-chip" th:text="${c.investigationType}"></span></td>
+                    <td><span class="status-pill" th:classappend="${c.status == 'ARCHIVED' ? ' status-pending' : ' status-ok'}" th:text="${c.status}"></span></td>
+                    <td><span class="case-date" th:text="${c.createdAt}"></span></td>
+                    <td class="text-end"><a class="case-open" th:href="@{'/cases/'+${c.caseId}}">Open <span>→</span></a></td>
+                </tr>
+                <tr id="noSearchResults" class="search-empty" style="display:none"><td colspan="6"><div class="empty-state"><span>⌕</span><strong>No matching cases</strong><small>Try another case ID, title or investigation type.</small></div></td></tr>
+                <tr th:if="${#lists.isEmpty(cases)}"><td colspan="6"><div class="empty-state"><span>⌁</span><strong>No investigation cases found</strong><small>Create your first case to start preserving evidence.</small><a class="dashboard-primary empty-cta" href="/cases/new">＋ Create Case</a></div></td></tr>
+                </tbody>
+            </table>
+        </div>
+        <div class="cases-footer"><span><i class="online-dot"></i> Evidence preservation enabled</span><span>Archived cases remain available for audit</span></div>
+    </section>
+</main>
+
+<script>
+const search = document.getElementById('caseSearch');
+const empty = document.getElementById('noSearchResults');
+if (search) search.addEventListener('input', () => {
+    const q = search.value.trim().toLowerCase();
+    let visible = 0;
+    document.querySelectorAll('.case-row').forEach(row => {
+        const match = row.textContent.toLowerCase().includes(q);
+        row.style.display = match ? '' : 'none';
+        if (match) visible++;
+    });
+    if (empty) empty.style.display = q && visible === 0 ? '' : 'none';
+});
+document.querySelectorAll('.reveal-panel').forEach((el, i) => el.style.animationDelay = (i * 70) + 'ms');
+</script>
+<script id="ev-motion-init">(function(){document.documentElement.classList.add("ev-motion-init");document.querySelectorAll(".reveal-panel").forEach(function(el,i){if(!el.style.animationDelay)el.style.animationDelay=Math.min(i*70,420)+"ms"});})();</script></body>
+</html>
